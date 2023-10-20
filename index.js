@@ -44,6 +44,7 @@ async function run() {
 
     const reviewCollection = client.db("hairCutting").collection("reviews");
     const serviceCollection = client.db("hairCutting").collection("services");
+    const userCollection = client.db("hairCutting").collection("user");
 
     //jwt
     app.post("/jwt", (req, res) => {
@@ -53,6 +54,22 @@ async function run() {
       });
       res.send({ token });
     });
+
+    //user api
+    app.post('/user', async (req, res) => {
+        const user = req.body;
+        console.log(user);
+        const query = {email : user.email}
+        const existingUser = await userCollection.findOne(query);
+        console.log(existingUser);
+        if(existingUser){
+          return res.send({message: 'User already exist.'})
+        }
+        const result = await userCollection.insertOne(user);
+       res.send(result);
+    });
+    
+
 
     //services api
     app.get("/service", async (req, res) => {
@@ -65,6 +82,8 @@ async function run() {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
