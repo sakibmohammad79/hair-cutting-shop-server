@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 var cors = require("cors");
@@ -68,8 +68,25 @@ async function run() {
         const result = await userCollection.insertOne(user);
        res.send(result);
     });
-    
 
+    //get all user
+    app.get('/alluser', async(req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
+    
+    //make admin role
+    app.patch('/admin/user/:id', async(req, res) => {
+      const id = req.params.id;
+      const filter = (_id = new ObjectId(id))
+      const updateDoc ={
+        $set: {
+          role : "admin"
+        }
+      }
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
 
     //services api
     app.get("/service", async (req, res) => {
