@@ -44,7 +44,12 @@ async function run() {
 
     const reviewCollection = client.db("hairCutting").collection("reviews");
     const serviceCollection = client.db("hairCutting").collection("services");
+    const serviceCartCollection = client.db("hairCutting").collection("cart");
     const userCollection = client.db("hairCutting").collection("user");
+
+    // const verifyAdmin = (res, req, next) => {
+    //   const filter = ()
+    // }
 
     //jwt
     app.post("/jwt", (req, res) => {
@@ -70,7 +75,7 @@ async function run() {
     });
 
     //get all user
-    app.get('/alluser', async(req, res) => {
+    app.get('/user', async(req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     })
@@ -78,7 +83,7 @@ async function run() {
     //make admin role
     app.patch('/admin/user/:id', async(req, res) => {
       const id = req.params.id;
-      const filter = (_id = new ObjectId(id))
+      const filter = {_id : new ObjectId(id) }
       const updateDoc ={
         $set: {
           role : "admin"
@@ -88,17 +93,46 @@ async function run() {
       res.send(result);
     })
 
+    //user delete
+    app.delete('/user/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)}
+      const result = await userCollection.deleteOne(filter);
+      res.send(result);
+    })
+
     //services api
     app.get("/service", async (req, res) => {
       const result = await serviceCollection.find().toArray();
       res.send(result);
     });
 
+    //service deleted
+    app.delete('/service/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)}
+      const result = await serviceCollection.deleteOne(filter);
+      res.send(result)
+    })
+
     //review collection
     app.get("/review", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
+
+    //service added in cart
+    app.post('/cart', async (req, res) => {
+      const service = req.body;
+      const result = await serviceCartCollection.insertOne(service);
+      res.send(result);
+    })
+
+    //service order list show in order list
+    app.get('/cart', async(req, res) => {
+      const result = await serviceCartCollection.find().toArray();
+      res.send(result);
+    })
 
 
 
