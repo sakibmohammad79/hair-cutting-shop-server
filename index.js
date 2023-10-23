@@ -121,6 +121,14 @@ async function run() {
       res.send(result);
     });
 
+    //review add
+    app.post('/addreview', async(req, res) => {
+      const newReview = req.body;
+      console.log(newReview);
+      const result = await reviewCollection.insertOne(newReview);
+      res.send(result);
+    })
+
     //service added in cart
     app.post('/cart', async (req, res) => {
       const service = req.body;
@@ -128,9 +136,20 @@ async function run() {
       res.send(result);
     })
 
+    
+
     //service order list show in order list
     app.get('/cart', async(req, res) => {
       const result = await serviceCartCollection.find().toArray();
+      res.send(result);
+    })
+
+    //cart get by email
+    app.get('/cart', async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = { email: new ObjectId(email) };
+      const result = await serviceCartCollection.find(query).toArray();
       res.send(result);
     })
 
