@@ -47,17 +47,18 @@ async function run() {
     const serviceCartCollection = client.db("hairCutting").collection("cart");
     const userCollection = client.db("hairCutting").collection("user");
 
-    const verifyAdmin = async (res, req, next) => {
+    //verify admin,  Warning use verifyJwt before using verifyAdmin
+    const verifyAdmin = async(req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      if (user.role !== "admin") {
+      if(user?.role !== "admin"){
         return res
-          .status(403)
-          .send({ error: true, message: "unauthorized access" });
+        .status(403)
+        .send({ error: true, message: "unauthorized access" });
       }
       next();
-    };
+    }
 
     //jwt
     app.post("/jwt", (req, res) => {
@@ -102,7 +103,7 @@ async function run() {
     });
 
     //check admin
-    app.get("/user/admin/:email", verifyJwt, async (req, res) => {
+    app.get("/user/admin/:email", async (req, res) => {
       const email = req.params.email;
       if (req.decoded.email !== email) {
         res.send({ admin: false });
@@ -126,6 +127,13 @@ async function run() {
       const result = await serviceCollection.find().toArray();
       res.send(result);
     });
+
+    //add Service
+    app.post('/service', verifyJwt, verifyAdmin, async (req, res) => {
+      const newService = req.body;
+      const result = await serviceCollection.insertOne(newService);
+      res.send(result);
+    })
 
     //service deleted
     app.delete("/service/:id", async (req, res) => {
@@ -162,6 +170,14 @@ async function run() {
       res.send(result);
     });
 
+    //order delete
+    app.delete("/orderlist/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await serviceCartCollection.deleteOne(filter);
+      res.send(result);
+    });
+
     //cart get by email
     app.get("/cart", verifyJwt, async (req, res) => {
       const email = req.query.email;
@@ -170,6 +186,14 @@ async function run() {
       const result = await serviceCartCollection.find(query).toArray();
       res.send(result);
     });
+
+    //mycart service delete
+    app.delete('/cart/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)};
+      const result = await serviceCartCollection.deleteOne(filter);
+      res.send(result)
+    } )
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
