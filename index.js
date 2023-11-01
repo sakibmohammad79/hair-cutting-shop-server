@@ -2,7 +2,8 @@ const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-var cors = require("cors");
+const cors = require("cors");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -46,6 +47,7 @@ async function run() {
     const serviceCollection = client.db("hairCutting").collection("services");
     const serviceCartCollection = client.db("hairCutting").collection("cart");
     const userCollection = client.db("hairCutting").collection("user");
+    const paymentCollection = client.db("hairCutting").collection("payments");
 
     //verify admin,  Warning use verifyJwt before using verifyAdmin
     const verifyAdmin = async(req, res, next) => {
@@ -72,10 +74,10 @@ async function run() {
     //user api
     app.post("/user", async (req, res) => {
       const user = req.body;
-      console.log(user);
+      //console.log(user);
       const query = { email: user.email };
       const existingUser = await userCollection.findOne(query);
-      console.log(existingUser);
+      //console.log(existingUser);
       if (existingUser) {
         return res.send({ message: "User already exist." });
       }
@@ -105,9 +107,9 @@ async function run() {
     //check admin
     app.get("/user/admin/:email", async (req, res) => {
       const email = req.params.email;
-      if (req.decoded.email !== email) {
-        res.send({ admin: false });
-      }
+      // if (req.decoded.email !== email) {
+      //   res.send({ admin: false });
+      // }
       const query = { email: email };
       const user = await userCollection.findOne(query);
       const result = { admin: user?.role === "admin" };
@@ -152,7 +154,7 @@ async function run() {
     //review add
     app.post("/addreview", async (req, res) => {
       const newReview = req.body;
-      console.log(newReview);
+      //console.log(newReview);
       const result = await reviewCollection.insertOne(newReview);
       res.send(result);
     });
@@ -181,7 +183,7 @@ async function run() {
     //cart get by email
     app.get("/cart", verifyJwt, async (req, res) => {
       const email = req.query.email;
-      console.log(email);
+      //console.log(email);
       const query = { email: email };
       const result = await serviceCartCollection.find(query).toArray();
       res.send(result);
@@ -194,6 +196,32 @@ async function run() {
       const result = await serviceCartCollection.deleteOne(filter);
       res.send(result)
     } )
+
+    //payment related api
+    app.post('/create-payment-intent', verifyJwt, async (req, res) => {
+      const {price} = req.body;
+      //console.log(price);
+      const amount = price*100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ['card']
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      })
+    })
+
+    //payments related api
+    app.post("/payments", verifyJwt, async (req, res) => {
+      const payments = req.body;
+      const paymentHistoryInsertResult = await paymentCollection.insertOne(payments);
+
+      const query = {_id: {$in : payments.serviceCartId.map(id => new ObjectId(id))}}
+      const cartDeleteResult = await serviceCartCollection.deleteMany(query);
+
+      res.send({paymentHistoryInsertResult, cartDeleteResult});
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
